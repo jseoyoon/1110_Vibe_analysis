@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /b:*)",
+      "Bash(python src/collect_bike_data.py:*)",
+      "Bash(python:*)",
+      "Bash(pip install:*)"
+    ]
+  },
+  "mcpServers": {
+    "pokemon": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "supergateway",
+        "--sse",
+        "https://seoyoun.app.n8n.cloud/mcp/seoyoun-pokemon"
+      ]
+    }
+  }
+}

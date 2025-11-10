@@ -1,0 +1,22 @@
+# 서울시 따릉이 데이터 분석 프로젝트 - 필수 패키지
+
+# 데이터 처리 및 분석
+pandas==2.1.4
+numpy==1.26.2
+
+# 시각화
+matplotlib==3.8.2
+seaborn==0.13.0
+
+# Jupyter 환경
+jupyter==1.0.0
+notebook==7.0.6
+ipykernel==6.27.1
+
+# 시계열 분석 (선택적)
+statsmodels==0.14.1
+
+# 유틸리티
+openpyxl==3.1.2  # Excel 파일 지원
+requests==2.31.0  # HTTP 요청
+python-dotenv==1.0.0  # 환경변수 관리
