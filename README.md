@@ -1,265 +1,403 @@
-🚲 서울시 따릉이(공공자전거) 일별 이용현황 통합 분석 프롬프트
-📍 프로젝트 컨텍스트
-
-데이터셋:
-1️⃣ 원시 데이터 → data/raws/bike_daily.csv
- • 기간: 2025-10-06 ~ 2025-11-02
- • 컬럼: STA_LOC, RENT_NM, STAT_DATA, RENT_CNT, RTN_CNT, START_INDEX, END_INDEX, RNUM
-
-2️⃣ 전처리 요약 데이터 → data/processed/bike_summary.csv
- • 컬럼: STA_LOC, RENT_NM, AVG_RENT_CNT, TOTAL_RENT_CNT, AVG_RTN_CNT, TOTAL_RTN_CNT
-
-3️⃣ 기상 데이터
- • data/raw/temperature.csv -> 일별 기온
-    기간: 2025-10-01 ~ 2025-11-09
-    컬럼: 지점번호, 지점명, 일시, 평균기온(℃), 최고기온(℃), 최고기온시각, 최저기온(℃), 최저기온시각, 일교차
- • data/raw/rainfall.csv -> 일별 강수량
-    기간: 2025-10-01 ~ 2025-11-09
-    컬럼: 지점번호, 지점명, 일시, 강수량(mm), 1시간최다강수량(mm), 1시간최다강수량 시각
--> 기상 데이터 사용시 2025-10-06 ~ 2025-11-02만 필터링하여 사용용
-
-🔹 데이터 특성
-
-시계열 + 공간 데이터
-추가 데이터: 기온, 강수량
-
-기간: 4주간 일별 수요 변화
-
-단위: 행정구(STA_LOC) / 대여소(RENT_NM)
-
-집계 데이터
-
-일평균(AVG_…) 및  합계(TOTAL_…) 기반 KPI
-
-🎯 분석 목적 및 주요 비즈니스 질문
-핵심 목표
-
-운영 효율화 — 수요 불균형 및 순유입 패턴 분석을 통한 재배치 의사결정
-
-핵심 대여소 식별 — 전체 수요의 중심축이 되는 주요 대여소 파악
-
-지역별 인프라 최적화 — 행정구 단위 이용패턴 비교를 통한 투자/보급 우선순위 수립
-
-이상 패턴 감지 — 특정 일자 또는 지역의 비정상적 수요 급등·급감 탐지
-
-🔍 분석 주제 및 핵심 질문
-1️⃣ 일별 수요 트렌드 분석 (raw 데이터 기반)
-
-질문
-
-4주 동안 전체 대여·반납 건수는 어떻게 변화했는가?
-
-요일별, 행정구별, 대여소별로 수요 패턴이 다른가?
-
-특정 일자에 급등/급감이 있었는가?
-
-접근
-
-STAT_DATA 기준 일별 총 대여·반납 시계열 그래프
-
-STA_LOC 단위 일평균 비교 그래프프
-
-이동평균 기반 이상치(±2σ, ±3σ) 탐지
-
-예상 인사이트
-
-“평일 주말 비교교 강남·마포구 수요 급등 → 평일 출퇴근 집중 + 금요일 야간 피크 패턴”
-"할로윈 주간 이벤트 영향으로 10월 4주차(28-31) 반납량 감소"
-“주말은 전체 수요 대비 22% 감소 → 업무지구 중심 수요 구조 확인”
-
-2️⃣ 대여소별 주간 효율성 (summary 데이터 기반)
-
-질문
-
-대여소별 일평균 이용량은 어느 정도인가?
-
-주간 기준 누적 합계 상위·하위 10개 대여소의 차이는?
-
-접근
-
-AVG_RENT_CNT, AVG_RTN_CNT, TOTAL_RENT_CNT, TOTAL_RTN_CNT 이용
-
-파레토 분석 (상위 20% 대여소 → 전체 수요 몇 %)
-
-Top 10 / Bottom 10 대여소 비교교
-
-예상 인사이트
-
-“상위 10개 대여소가 전체 주간 대여량의 38% 차지 → 집중 운영 필요”
-“하위 10개 대여소는 평균 이용량 1건 미만 → 거치대 재배치 후보군”
-
-3️⃣ 순유입(Net Flow) 및 불균형 분석
-
-질문
-
-어떤 대여소가 지속적인 순유입(대여>반납) 또는 순유출(반납>대여) 상태인가?
-
-불균형 정도가 심한 지역(행정구)은 어디인가?
-
-순유입 대여소의 지리적 특징은? (주거지/업무지구 중심?)
-
-접근
-
-NET_FLOW = TOTAL_RENT_CNT - TOTAL_RTN_CNT
-
-IMBAL_RATIO = |RENT−RTN| / (RENT+RTN)
-
-상위 10개 불균형 대여소 히트맵
-Week별 불균형 변화 라인차트
-
-
-예상 인사이트
-
-“업무지구 대여소는 순유입 음수(반납>대여), 주거지 대여소는 양수 → 출근/퇴근 패턴 고착화화”
-“불균형 상위 5개 대여소가 전체 재배치 요청의 55% 유발”
-
-4️⃣ 일자별 이상치 및 이벤트 감지
-
-질문
-
-특정 일자·지역에서 이상 급등/급감 패턴이 있었는가?
-
-주중 vs 주말 수요 차이가 통계적으로 유의한가?
-
-외부 요인(할로윈의 영향)과의 연관성은?
-
-접근
-
-이동평균 ±2σ 이상 일자 탐지
-
-주중/주말 t-test
-
-이상치 발생 대여소 목록 리포트
-
-예상 인사이트
-
-“10/31 이태원, 홍대입구, 강남역 대여 변화화 — 할로윈 행사 영향 추정”
-“주말 평균 대여량 15%↓ → 업무지구 중심 구조 반영”
-"1006 ~ 1018 강수량 확인 -> 대여 사용량 감소"
-
-5️⃣ 🌤 날씨 요인 기반 수요 상관 분석 (기온·강수량 연계)
-
-질문
-
-기온과 강수량 변화가 따릉이 이용량에 어떤 영향을 미치는가?
-
-강수 시 이용량 감소폭은 어느 정도인가?
-
-온도 구간별(10℃ 미만 / 10~20℃ / 20℃ 이상) 이용패턴 차이는?
-
-접근
-
-STAT_DATA 기준으로 temperature.csv, rainfall.csv 병합
-
-Pearson 상관계수 계산
-
-강수일(RAINFALL > 0) vs 무강수일 비교 t-test
-
-기온 구간별 평균 대여량 Boxplot
-
-예상 인사이트
-
-“기온 15~20℃ 구간에서 이용량 최고 → 쾌적한 날씨 영향”
-
-“강수일 평균 대여량 35%↓ → 강우 시 외출 회피 경향 명확”
-
-“10/06~10/18 잦은 강수 → 대여량 일시 감소 (날씨 탄력도 약 -0.4)”
-
-
-
-
-📊 시각화 가이드
-구분	그래프 형태	주요 인사이트
-일별 대여/반납 추이	Line Chart	주간 수요 흐름 확인
-대여소별 평균 이용량	Bar Chart	Top10/Bottom10 대여소
-행정구별 평균 수요	Horizontal Bar	지역별 균형 비교
-불균형 Top10	Bar Chart	재배치 우선 대여소
-Net Flow 지도	Heatmap	순유입/순유출 공간 패턴
-🧩 핵심 Python 코드 스니펫
-import pandas as pd
-
-# Load
-df_raw = pd.read_csv("data/raws/bike_weekly.csv")
-df_sum = pd.read_csv("data/processed/bike_weekly_summary.csv")
-
-# 파생 변수
-df_sum["NET_FLOW"] = df_sum["TOTAL_RENT_CNT"] - df_sum["TOTAL_RTN_CNT"]
-df_sum["IMBAL_RATIO"] = (
-    abs(df_sum["TOTAL_RENT_CNT"] - df_sum["TOTAL_RTN_CNT"])
-    / (df_sum["TOTAL_RENT_CNT"] + df_sum["TOTAL_RTN_CNT"])
-).fillna(0)
-
-# 행정구 요약
-gu_summary = df_sum.groupby("STA_LOC").agg(
-    평균_대여=("AVG_RENT_CNT","mean"),
-    평균_반납=("AVG_RTN_CNT","mean"),
-    합계_대여=("TOTAL_RENT_CNT","sum"),
-    합계_반납=("TOTAL_RTN_CNT","sum"),
-    평균_불균형=("IMBAL_RATIO","mean"),
-    대여소_수=("RENT_NM","nunique")
-).reset_index()
-
-# 상위/하위 대여소
-top10_rent = df_sum.nlargest(10, "TOTAL_RENT_CNT")
-bottom10_rent = df_sum.nsmallest(10, "TOTAL_RENT_CNT")
-
-top10_imb = df_sum.nlargest(10, "IMBAL_RATIO")
-
-print("Top 10 대여소:\n", top10_rent[["STA_LOC","RENT_NM","TOTAL_RENT_CNT"]])
-print("불균형 Top 10 대여소:\n", top10_imb[["STA_LOC","RENT_NM","IMBAL_RATIO"]])
-
-📦 최종 결과물 (Deliverables)
-
-1️⃣ 데이터
-
-data/raws/bike_daily.csv — 일별 이용 로그
-
-data/processed/bike_summary.csv — 주간 요약 지표
-
-2️⃣ 분석 산출물
-
-Top10/Bottom10 리스트 (대여, 반납, 불균형)
-
-행정구별 요약 테이블
-
-순유입·불균형 지도
-
-기온.강수량과 대여 상관 분석
-
-3️⃣ 시각화
-
-outputs/figures/ 폴더 내 주요 그래프 (trend, map, imbalance 등)
-
-4️⃣ 리포트
-
-핵심 발견 3개 + 실행 권고 3개
-
-AM/PM 루틴 개선 및 거치대 조정 제안서
-
-💡 기대 인사이트 요약
-주제	핵심 발견	실행 아이디어
-수요 집중	상위 10개소 38% 점유	우선 보급 대상 지정
-불균형 핫스팟	5개소가 전체 재배치 60% 유발	주 2회 점검·임시 거치대 운영
-지역 격차	업무지구>주거지 불균형	출근시간 보급·퇴근시간 회수 루틴
-🚀 실행 권고사항
-
-단기 (1~2주)
-• 순유입 Top 대여소 AM 보급 강화
-• 불균형 상위 대여소 실시간 모니터링
-
-중기 (1~3개월)
-• 주말·이벤트 패턴 분리 운영
-• 행정구별 KPI 기반 자전거 배분
-
-장기 (3개월+)
-• 동적 재배치 최적화 루트 설계
-• AI 기반 수요예측 시스템 구축
-
-이 프롬프트 사용법
-1️⃣ bike_weekly.csv와 bike_weekly_summary.csv를 로드
-2️⃣ 3~5개의 인사이트와 실행 전략 도출
-3️⃣ 운영 루틴(보급/회수/증설)에 반영
-
-핵심:
-두 데이터(raw + summary)를 함께 활용해
-“시간적 흐름(일별)”과 “공간적 집중(대여소별)”을 동시에 해석하라.
+# 🚲 서울시 따릉이 공공자전거 이용현황 데이터 분석 프로젝트
+
+[![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/)
+[![Pandas](https://img.shields.io/badge/Pandas-2.0+-green.svg)](https://pandas.pydata.org/)
+[![Matplotlib](https://img.shields.io/badge/Matplotlib-3.8+-orange.svg)](https://matplotlib.org/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+서울시 공공자전거(따릉이) 이용 데이터를 활용한 **수요 패턴 분석** 및 **운영 최적화 인사이트 도출** 프로젝트입니다.
+
+---
+
+## 📋 목차
+
+- [프로젝트 개요](#-프로젝트-개요)
+- [주요 기능](#-주요-기능)
+- [기술 스택](#-기술-스택)
+- [프로젝트 구조](#-프로젝트-구조)
+- [설치 및 실행](#-설치-및-실행)
+- [데이터 수집](#-데이터-수집)
+- [분석 결과](#-분석-결과)
+- [핵심 인사이트](#-핵심-인사이트)
+- [실행 권고사항](#-실행-권고사항)
+- [Jupyter Notebook](#-jupyter-notebook)
+- [라이선스](#-라이선스)
+
+---
+
+## 🎯 프로젝트 개요
+
+### 배경
+서울시 공공자전거 따릉이는 시민들의 중요한 교통수단으로 자리잡았지만, **대여소별 수요 불균형**, **재배치 비효율**, **날씨에 따른 수요 변화** 등의 운영 과제가 존재합니다.
+
+### 목적
+- ✅ **운영 효율화**: 수요 불균형 및 순유입 패턴 분석을 통한 재배치 의사결정 지원
+- ✅ **핵심 대여소 식별**: 전체 수요의 중심축이 되는 주요 대여소 파악
+- ✅ **지역별 인프라 최적화**: 행정구 단위 이용패턴 비교를 통한 투자/보급 우선순위 수립
+- ✅ **이상 패턴 감지**: 특정 일자 또는 지역의 비정상적 수요 급등·급감 탐지
+- ✅ **날씨 영향 분석**: 기온 및 강수량이 이용 패턴에 미치는 영향 규명
+
+### 분석 기간
+**2025년 10월 6일 ~ 2025년 11월 2일** (28일간)
+
+### 데이터 규모
+- **총 데이터**: 76,114건
+- **대여소**: 2,764개
+- **행정구**: 25개
+- **총 대여건수**: 2,978,868건
+- **총 반납건수**: 2,962,816건
+
+---
+
+## ⚡ 주요 기능
+
+### 1. 데이터 수집 (Data Collection)
+- 서울시 공공데이터 OpenAPI를 통한 일별 이용현황 데이터 자동 수집
+- 페이징 처리를 통한 대용량 데이터 수집 (1,000건 단위)
+- 기상청 기온 및 강수량 데이터 통합
+
+### 2. 데이터 전처리 (Data Processing)
+- 대여소별 일평균/합계 집계
+- 순유입(Net Flow) 및 불균형률(Imbalance Ratio) 계산
+- 요일별, 주말/평일 분류
+
+### 3. 통합 분석 (Comprehensive Analysis)
+#### 📈 일별 수요 트렌드 분석
+- 시계열 대여/반납 건수 추이
+- 요일별 패턴 분석
+- 이동평균 기반 이상치 탐지 (±2σ)
+
+#### 🏆 대여소별 효율성 분석
+- 파레토 분석 (상위 20% 대여소의 수요 비율)
+- 대여건수 상위/하위 10개 대여소 식별
+- 비효율 대여소 재배치 후보군 선정
+
+#### ⚖️ 순유입 및 불균형 분석
+- 순유입(대여 > 반납) 및 순유출(반납 > 대여) 대여소 분류
+- 불균형률 상위 대여소 식별
+- 지리적 패턴 분석 (업무지구 vs 주거지)
+
+#### 🔍 이상치 및 이벤트 감지
+- 통계적 이상치 탐지
+- 평일 vs 주말 t-test
+- 특정 일자 수요 급등/급감 원인 분석
+
+#### 🌤️ 날씨 요인 기반 수요 상관 분석
+- 기온과 대여량의 Pearson 상관계수 계산
+- 강수량과 대여량의 상관관계 분석
+- 강수일 vs 무강수일 비교 (t-test)
+- 기온 구간별 (10℃ 미만, 10-15℃, 15-20℃, 20℃ 이상) 이용 패턴
+
+#### 🗺️ 행정구별 요약 분석
+- 25개 행정구 수요 비교
+- 행정구별 평균 불균형률
+- 지역별 투자 우선순위 도출
+
+### 4. 시각화 (Visualization)
+- 6개의 고품질 분석 그래프 자동 생성
+- Matplotlib/Seaborn 기반 한글 지원
+- 300 DPI 해상도 PNG 저장
+
+### 5. 리포트 생성 (Report Generation)
+- 자동화된 분석 리포트 생성
+- CSV 형식 상세 데이터 저장
+- 실행 권고사항 제시
+
+---
+
+## 🛠 기술 스택
+
+### 언어 & 라이브러리
+- **Python 3.11**
+- **Data Processing**: Pandas, NumPy
+- **Visualization**: Matplotlib, Seaborn
+- **Statistical Analysis**: SciPy
+- **API Integration**: Requests
+- **Environment Management**: python-dotenv
+
+### 데이터 소스
+- [서울 열린데이터 광장](https://data.seoul.go.kr/) - 공공자전거 이용현황 API
+- 기상청 - 일별 기온 및 강수량 데이터
+
+### 개발 환경
+- **IDE**: VSCode
+- **Notebook**: Jupyter Notebook
+- **Version Control**: Git
+
+---
+
+## 📁 프로젝트 구조
+
+```
+woongjin_final_project/
+├── data/                           # 데이터 디렉토리
+│   ├── raw/                        # 원시 데이터
+│   │   ├── bike_daily.csv          # 일별 이용현황 (76,114건)
+│   │   ├── temperature.csv         # 기온 데이터
+│   │   └── rainfall.csv            # 강수량 데이터
+│   └── processed/                  # 전처리 데이터
+│       └── bike_summary.csv        # 대여소별 요약 (2,764개)
+│
+├── src/                            # 소스 코드
+│   ├── collect_bike_data.py        # 데이터 수집 스크립트
+│   ├── preprocess_bike_data.py     # 데이터 전처리 스크립트
+│   └── comprehensive_bike_analysis.py  # 통합 분석 스크립트
+│
+├── notebooks/                      # Jupyter Notebooks
+│   └── comprehensive_bike_analysis.ipynb  # 인터랙티브 분석 노트북
+│
+├── outputs/                        # 분석 결과물
+│   ├── figures/                    # 시각화 결과
+│   │   ├── 01_daily_trend.png      # 일별 수요 트렌드
+│   │   ├── 02_station_efficiency.png  # 대여소 효율성
+│   │   ├── 03_net_flow.png         # 순유입 분석
+│   │   ├── 04_anomaly_detection.png   # 이상치 탐지
+│   │   ├── 05_weather_correlation.png # 날씨 상관관계
+│   │   └── 06_district_summary.png    # 행정구별 요약
+│   └── reports/                    # 분석 리포트
+│       ├── final_report.txt        # 최종 종합 리포트
+│       ├── district_summary.csv    # 행정구별 상세 데이터
+│       └── top10_imbalance.csv     # 불균형 상위 10개 대여소
+│
+├── prompts/                        # 프롬프트 문서
+│   ├── import data.txt             # 데이터 수집 가이드
+│   └── bike_daily_data_analysis.txt  # 분석 가이드
+│
+├── .env                            # 환경 변수 (API 키)
+├── requirements.txt                # Python 패키지 의존성
+└── README.md                       # 프로젝트 문서 (본 파일)
+```
+
+---
+
+## 🚀 설치 및 실행
+
+### 1. 저장소 클론
+```bash
+git clone <repository-url>
+cd woongjin_final_project
+```
+
+### 2. 가상환경 생성 및 활성화
+```bash
+# Windows
+python -m venv venv
+venv\Scripts\activate
+
+# macOS/Linux
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 3. 패키지 설치
+```bash
+pip install -r requirements.txt
+```
+
+### 4. 환경 변수 설정
+`.env` 파일을 생성하고 서울시 OpenAPI 키를 입력합니다:
+```env
+KEY=your_seoul_openapi_key_here
+```
+
+> 📌 API 키는 [서울 열린데이터 광장](https://data.seoul.go.kr/)에서 발급받을 수 있습니다.
+
+---
+
+## 📊 데이터 수집
+
+### 데이터 수집 실행
+```bash
+python src/collect_bike_data.py
+```
+
+**수집 결과:**
+- 수집 기간: 2025-10-06 ~ 2025-11-02 (28일)
+- 총 76,114건의 데이터 수집
+- 저장 경로: `data/raw/bike_daily.csv`
+
+### 데이터 전처리
+```bash
+python src/preprocess_bike_data.py
+```
+
+**전처리 결과:**
+- 대여소별 집계 완료 (2,764개 대여소)
+- 평균/합계 지표 계산
+- 저장 경로: `data/processed/bike_summary.csv`
+
+---
+
+## 📈 분석 결과
+
+### 통합 분석 실행
+```bash
+python src/comprehensive_bike_analysis.py
+```
+
+**생성 결과물:**
+- 📊 6개의 시각화 그래프 (`outputs/figures/`)
+- 📝 3개의 분석 리포트 (`outputs/reports/`)
+
+### 주요 통계
+
+#### 전체 현황
+- **일평균 대여**: 106,388건
+- **일평균 반납**: 105,815건
+- **평일 평균**: 110,983건
+- **주말 평균**: 94,902건
+- **주말 감소율**: 14.5%
+
+#### 대여소 분포
+- **평균 대여건수**: 1,078건
+- **중앙값**: 804건
+- **상위 20% 대여소 수요 비중**: 48.0%
+
+#### 불균형 현황
+- **순유입 대여소**: 1,438개 (대여 > 반납)
+- **순유출 대여소**: 1,283개 (반납 > 대여)
+- **평균 불균형률**: 0.072
+
+#### 날씨 영향 (핵심 발견 ⭐)
+- **기온 상관계수**: -0.189 (약한 음의 상관)
+- **강수량 상관계수**: -0.812 (강한 음의 상관)
+- **강수일 수요 감소**: 36.9% ↓ (통계적으로 유의함, p=0.0012)
+- **최적 기온 구간**: 10-15℃
+
+---
+
+## 💡 핵심 인사이트
+
+### 1. 수요 집중 패턴
+- 상위 10개 대여소가 전체 대여량의 **2.7%** 차지
+- **최고 수요 대여소**: 마곡나루역 2번 출구 (12,907건)
+- 파레토 법칙: 상위 20% 대여소가 전체의 **48.0%** 처리
+- **💼 실행 아이디어**: 상위 10개 대여소 우선 관리 및 보급 강화
+
+### 2. 불균형 핫스팟
+- 상위 10개 불균형 대여소의 평균 불균형률: **0.874**
+- 최대 순유출: 응암역2번출구 (-1,174건)
+- 업무지구는 순유출, 주거지는 순유입 패턴 명확
+- **💼 실행 아이디어**: 주 2회 이상 점검 및 임시 거치대 운영
+
+### 3. 지역 격차
+- 최고 수요 행정구: **강서구** (360,635건)
+- 최저 수요 행정구: **강북구** (35,508건)
+- 10배 이상의 수요 격차 존재
+- **💼 실행 아이디어**: 출근시간 보급·퇴근시간 회수 루틴 강화
+
+### 4. 날씨의 결정적 영향
+- 강수일 대여량이 무강수일 대비 **36.9% 감소**
+- 강수량이 대여량에 가장 큰 영향 (상관계수 -0.812)
+- 기온 10-15℃ 구간에서 최고 이용량 (123,934건)
+- **💼 실행 아이디어**: 날씨 기반 수요 예측 시스템 구축
+
+### 5. 요일별 패턴
+- 평일이 주말 대비 **14.5% 높은 수요**
+- 금요일 수요 피크 확인
+- 주말은 업무지구 수요 급감
+- **💼 실행 아이디어**: 평일/주말 분리 운영 전략
+
+---
+
+## 🎯 실행 권고사항
+
+### 단기 (1~2주)
+- ✅ 순유입 Top 10 대여소 오전 보급 강화
+- ✅ 불균형 상위 대여소 실시간 모니터링 시스템 구축
+- ✅ 강수 예보 시 대여소별 사전 재배치
+
+### 중기 (1~3개월)
+- ✅ 주말·평일 패턴 분리 운영
+- ✅ 행정구별 KPI 기반 자전거 배분
+- ✅ 날씨 기반 수요 예측 모델 개발
+- ✅ 하위 10개 대여소 거치대 재배치 검토
+
+### 장기 (3개월+)
+- ✅ 동적 재배치 최적화 루트 설계
+- ✅ AI 기반 수요예측 시스템 구축
+- ✅ 실시간 날씨 연동 자동 재배치 시스템
+- ✅ 업무지구-주거지 순환 셔틀 운영
+
+---
+
+## 📓 Jupyter Notebook
+
+인터랙티브 분석을 원하시면 Jupyter Notebook을 사용하세요:
+
+```bash
+jupyter notebook notebooks/comprehensive_bike_analysis.ipynb
+```
+
+**노트북 특징:**
+- 셀 단위 실행으로 단계별 분석 가능
+- 각 분석마다 상세한 설명 포함
+- 시각화 결과 즉시 확인
+- 코드 수정 및 실험 용이
+
+---
+
+## 📸 분석 시각화 샘플
+
+### 일별 수요 트렌드
+![일별 트렌드](outputs/figures/01_daily_trend.png)
+
+### 대여소별 효율성
+![대여소 효율성](outputs/figures/02_station_efficiency.png)
+
+### 순유입 분석
+![순유입 분석](outputs/figures/03_net_flow.png)
+
+### 날씨 상관관계
+![날씨 상관관계](outputs/figures/05_weather_correlation.png)
+
+---
+
+## 📚 참고 자료
+
+- [서울 열린데이터 광장](https://data.seoul.go.kr/)
+- [공공자전거 이용현황 API 문서](http://data.seoul.go.kr/dataList/OA-15493/F/1/datasetView.do)
+- [기상청 기상자료개방포털](https://data.kma.go.kr/)
+
+---
+
+## 🤝 기여
+
+프로젝트 개선 아이디어나 버그 리포트는 언제든 환영합니다!
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+## 📝 라이선스
+
+이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 `LICENSE` 파일을 참고하세요.
+
+---
+
+## 👨‍💻 개발자
+
+**프로젝트 관리 및 데이터 분석**
+- Data Collection & Processing
+- Statistical Analysis & Visualization
+- Insight Generation & Reporting
+
+---
+
+## 📧 문의
+
+프로젝트 관련 문의사항이 있으시면 Issue를 생성해주세요.
+
+---
+
+<div align="center">
+
+**⭐ 이 프로젝트가 도움이 되었다면 Star를 눌러주세요! ⭐**
+
+Made with ❤️ by Data Analyst
+
+</div>
