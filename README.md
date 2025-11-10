@@ -396,8 +396,6 @@ jupyter notebook notebooks/comprehensive_bike_analysis.ipynb
 
 <div align="center">
 
-**⭐ 이 프로젝트가 도움이 되었다면 Star를 눌러주세요! ⭐**
 
-Made with ❤️ by Data Analyst
 
 </div>
